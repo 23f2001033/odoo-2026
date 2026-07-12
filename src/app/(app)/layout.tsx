@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { AppSidebar } from "@/components/app-sidebar";
+import { MobileNav } from "@/components/mobile-nav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -23,8 +25,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AppSidebar role={role} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b px-4 md:px-6">
-          <div className="md:hidden text-lg font-bold">
-            Asset<span className="text-primary">Flow</span>
+          <div className="flex items-center gap-2 md:hidden">
+            <MobileNav role={role} />
+            <Link href="/dashboard" className="text-lg font-bold">
+              Asset<span className="text-primary">Flow</span>
+            </Link>
           </div>
           <div className="hidden md:block" />
           <div className="flex items-center gap-3">

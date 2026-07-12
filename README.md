@@ -55,4 +55,6 @@ Demo login: `asha@assetflow.dev` / `Password123` (Admin — see `prisma/seed.ts`
 - [x] Milestone 6 — Asset Audit (cycles, QR-driven verification, discrepancy cascade)
 - [x] Milestone 7 — Notifications, Activity Log, scheduled jobs, dashboard accuracy pass
 - [x] Milestone 8 — Reports & Analytics (utilization, maintenance frequency, booking heatmap, CSV export)
-- [ ] Milestone 9 — polish, seed refinement, deploy, demo rehearsal (order in [docs/04-architecture.md §12](docs/04-architecture.md))
+- [x] Milestone 9 — mobile navigation, seed data polish (full activity/notification history, second closed audit cycle, pending transfer/maintenance), corrected demo script, live rehearsal
+
+All 10 required screens are built and verified against the live app. See [docs/03-product-plan.md §5](docs/03-product-plan.md) for the rehearsed demo script.

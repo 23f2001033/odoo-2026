@@ -23,7 +23,7 @@ type NavItem = {
   roles?: Role[]; // omit = visible to all roles
 };
 
-const NAV: NavItem[] = [
+export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/assets", label: "Assets", icon: Package },
   { href: "/allocations", label: "Allocations", icon: ArrowLeftRight },
@@ -35,9 +35,37 @@ const NAV: NavItem[] = [
   { href: "/organization", label: "Organization", icon: Building2, roles: ["ADMIN"] },
 ];
 
-export function AppSidebar({ role }: { role: Role }) {
+// Shared by the fixed desktop sidebar and the mobile drawer (MobileNav) so
+// the two never drift out of sync — one NAV array, one link-rendering path.
+export function NavLinks({ role, onNavigate }: { role: Role; onNavigate?: () => void }) {
   const pathname = usePathname();
 
+  return (
+    <nav className="space-y-1 p-2">
+      {NAV.filter((item) => !item.roles || item.roles.includes(role)).map((item) => {
+        const active = pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              active
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+export function AppSidebar({ role }: { role: Role }) {
   return (
     <aside className="hidden w-56 shrink-0 border-r bg-muted/30 md:block">
       <div className="flex h-14 items-center border-b px-4">
@@ -45,26 +73,7 @@ export function AppSidebar({ role }: { role: Role }) {
           Asset<span className="text-primary">Flow</span>
         </Link>
       </div>
-      <nav className="space-y-1 p-2">
-        {NAV.filter((item) => !item.roles || item.roles.includes(role)).map((item) => {
-          const active = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <NavLinks role={role} />
     </aside>
   );
 }

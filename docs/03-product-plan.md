@@ -67,14 +67,16 @@ Purchasing, invoicing, accounting integration (out of scope per PDF), native mob
 
 ## 5. Demo Script (7–8 minutes)
 
+> Verified against the live app in milestone 9's rehearsal — every beat below is the actual, working mechanic, not the aspirational version. Demo logins: `Password123` for everyone (see `prisma/seed.ts` header).
+
 1. **Hook (30s):** "A 1,000-asset org loses up to $60k/year to spreadsheet tracking — errors, lost items, missed maintenance. AssetFlow replaces that with one system."
-2. Admin: create department, promote Asset Manager (show signup has no role picker).
-3. Asset Manager: register laptop → auto tag + QR appears → allocate to Priya with return date.
-4. **Conflict demo:** as Raj, try to allocate the same laptop → blocked, "held by Priya", raise Transfer Request → approve as Manager → history updates.
-5. **Booking demo:** Room B2 9:00–10:00 exists; request 9:30–10:30 → rejected; 10:00–11:00 → accepted. Show calendar + heatmap.
-6. **Maintenance:** raise with photo → approve → asset flips to Under Maintenance → resolve → back to Available; show per-asset history.
-7. **Audit climax:** open cycle, scan QR on a phone, mark one asset Missing → discrepancy report generates → close cycle → asset becomes Lost → notification fires.
-8. **Close:** dashboard KPIs + overdue flags + activity log ("every action you just watched is in here"), export a report.
+2. As **Asha (Admin)**: Organization Setup → create a department, promote an employee to Asset Manager in the Employee Directory tab — the *only* place a role is ever assigned (signup never offers a role picker; show that too).
+3. As **Manoj (Asset Manager)**: register a new asset → the auto-generated tag (`AF-08xx`) and its QR code appear immediately on the detail page → open the seeded **AF-0114 (MacBook Pro, held by Priya)** and try to allocate it to someone else → blocked with **"currently held by Priya Sharma"**.
+4. **Conflict → transfer demo (the spec's own example):** as **Raj (Employee)**, open AF-0114's asset page — the *Request Transfer* button is what a non-holder sees (employees don't get a raw Allocate action; only Asset Manager does). Raj requests it for himself → as **Manoj** or **Deepa (Engineering Dept Head)**, approve from the Allocations & Transfers screen → allocation history updates atomically (Priya's closes, Raj's opens), asset never leaves Allocated the whole time.
+5. **Booking demo:** open Bookings, select **Room B2** — the seeded 9:00–10:00 slot is there. Request 9:30–10:30 → rejected with the conflicting range named. Request 10:00–11:00 → accepted (starts right after — the boundary case). Show the week calendar, then Reports → Resource Booking Heatmap.
+6. **Maintenance:** as any employee, raise a request with a photo on an available asset → as Manoj, approve (asset flips to Under Maintenance) → assign a technician → start → resolve (asset returns to Available, or back to Allocated if it was held) → show the per-asset Maintenance History on the asset detail page.
+7. **Audit climax:** open the seeded **"Q3 Floor-1 Audit"** cycle (Kiran is the assigned auditor) → scan an asset's QR with a phone camera (one tap = Verified) → manually mark a different item Missing with a note → the discrepancy report card appears live on the page → close the cycle as Asha → the Missing asset flips to **Lost**, every Asset Manager gets an Audit Discrepancy notification. (The seed also ships a second, already-**closed** cycle — "Floor 2 Spot Check (Q2)" — showing the full lifecycle including an auto-raised maintenance ticket from a Damaged item, in case there's no time to run one live.)
+8. **Close:** Dashboard KPIs + the overdue-return banner (Arjun's seeded overdue laptop) → the bell icon's notification dropdown → `/activity`'s Activity Log tab ("every action you just watched is in here, who did what, when") → Reports & Analytics, export a CSV.
 
 ## 6. Risks & Mitigations
 
