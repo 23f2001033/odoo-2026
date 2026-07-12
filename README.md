@@ -10,6 +10,7 @@ Hackathon project: a centralized platform for organizations to track, allocate, 
 | [docs/02-market-research.md](docs/02-market-research.md) | Market size, spreadsheet pain points, competitor gaps (Snipe-IT / Asset Panda / Limble), research-backed feature decisions |
 | [docs/03-product-plan.md](docs/03-product-plan.md) | Prioritized build plan (P0/P1/P2), personas, demo script, risks, open architecture decisions |
 | [docs/04-architecture.md](docs/04-architecture.md) | Full system design — stack, layered module architecture, ERD, state machines, DB-level conflict constraints, RBAC, API surface, jobs, testing, build order |
+| [docs/05-demo-video-script.md](docs/05-demo-video-script.md) | Timed, ≤5-minute script for the portal's required demo video submission (functional flow only) |
 
 ## Quickstart (every teammate)
 
