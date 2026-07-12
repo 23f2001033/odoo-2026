@@ -54,4 +54,5 @@ Demo login: `asha@assetflow.dev` / `Password123` (Admin — see `prisma/seed.ts`
 - [x] Milestone 5 — Maintenance Management (approval-gated repair workflow, asset status flips)
 - [x] Milestone 6 — Asset Audit (cycles, QR-driven verification, discrepancy cascade)
 - [x] Milestone 7 — Notifications, Activity Log, scheduled jobs, dashboard accuracy pass
-- [ ] Milestones 8–9 — Reports & Analytics, polish/deploy/rehearsal (order in [docs/04-architecture.md §12](docs/04-architecture.md))
+- [x] Milestone 8 — Reports & Analytics (utilization, maintenance frequency, booking heatmap, CSV export)
+- [ ] Milestone 9 — polish, seed refinement, deploy, demo rehearsal (order in [docs/04-architecture.md §12](docs/04-architecture.md))
