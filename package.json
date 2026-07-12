@@ -11,7 +11,8 @@
     "test": "vitest run --passWithNoTests",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "prisma db seed",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "cron": "tsx scripts/cron.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -27,6 +28,7 @@
     "next": "16.2.10",
     "next-auth": "^5.0.0-beta.31",
     "next-themes": "^0.4.6",
+    "node-cron": "^4.6.0",
     "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
@@ -40,6 +42,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",

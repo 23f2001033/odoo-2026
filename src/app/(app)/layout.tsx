@@ -3,6 +3,7 @@ import { auth, signOut } from "@/auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: "Admin",
@@ -27,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
           <div className="hidden md:block" />
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <Badge variant="secondary">{ROLE_LABEL[role] ?? role}</Badge>
             <span className="text-sm font-medium">{name}</span>
             <form

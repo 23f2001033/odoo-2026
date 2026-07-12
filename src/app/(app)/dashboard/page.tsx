@@ -121,11 +121,6 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
-
-      <p className="text-xs text-muted-foreground">
-        Milestone 0 scaffold — asset directory, allocations, bookings, maintenance, audits and
-        reports land in the next milestones.
-      </p>
     </div>
   );
 }

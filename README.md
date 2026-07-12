@@ -23,9 +23,12 @@ psql -U postgres -c "CREATE DATABASE assetflow;"
 npm run db:migrate           # applies prisma/migrations (incl. DB constraints)
 npm run db:seed              # demo org — logins printed at the end
 npm run dev                  # http://localhost:3000
+npm run cron                 # optional, separate terminal — runs the overdue/reminder jobs locally
 ```
 
 Demo login: `asha@assetflow.dev` / `Password123` (Admin — see `prisma/seed.ts` header for all personas).
+
+`npm run cron` is optional — "overdue" and every derived status are always computed live wherever they're shown, so the app is correct without it. It only adds the proactive notifications (overdue-return alerts, booking reminders) a real deployment would send on a schedule.
 
 **Before coding, read [docs/04-architecture.md](docs/04-architecture.md) §2 (layering rules) and §5–6 (constraints & state machines).** Business logic goes in `src/modules/<domain>/service.ts` — never in pages or route handlers.
 
@@ -41,8 +44,14 @@ Demo login: `asha@assetflow.dev` / `Password123` (Admin — see `prisma/seed.ts`
 
 ## Status
 
-- [x] Problem statement analyzed
-- [x] Market research & product plan documented
+- [x] Problem statement analyzed, market research & product plan documented
 - [x] Design & architecture documented
-- [x] Milestone 0 — scaffold, schema + DB constraints, auth (employee-only signup), app shell, live-KPI dashboard, seed
-- [ ] Milestones 1–9 (order in [docs/04-architecture.md §12](docs/04-architecture.md))
+- [x] Milestone 0 — scaffold, schema + DB constraints, auth, app shell, live-KPI dashboard, seed
+- [x] Milestone 1 — Organization Setup (departments, categories, employee directory, admin-only promote)
+- [x] Milestone 2 — Asset Registration & Directory (race-safe tags, QR codes, camera scanning)
+- [x] Milestone 3 — Asset Allocation & Transfer (double-allocation conflict, transfer workflow)
+- [x] Milestone 4 — Resource Booking (overlap prevention, week calendar, cancel/reschedule)
+- [x] Milestone 5 — Maintenance Management (approval-gated repair workflow, asset status flips)
+- [x] Milestone 6 — Asset Audit (cycles, QR-driven verification, discrepancy cascade)
+- [x] Milestone 7 — Notifications, Activity Log, scheduled jobs, dashboard accuracy pass
+- [ ] Milestones 8–9 — Reports & Analytics, polish/deploy/rehearsal (order in [docs/04-architecture.md §12](docs/04-architecture.md))
