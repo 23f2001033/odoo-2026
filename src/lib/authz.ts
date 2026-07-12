@@ -42,6 +42,28 @@ export function hasPermission(user: { role: Role }, permission: Permission): boo
   return (PERMISSIONS[permission] as readonly Role[]).includes(user.role);
 }
 
+// NextAuth's Session.user carries name/email as `string | null | undefined`
+// (DefaultSession's generic shape), but every account in this app is created
+// through signup with a required name — so a null name never happens in
+// practice. This makes that guarantee explicit at the one seam where an
+// external type meets our internal SessionUser contract, instead of an
+// unsound `as SessionUser` cast papering over the mismatch.
+export function normalizeSessionUser(user: {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  role: Role;
+  departmentId: string | null;
+}): SessionUser {
+  return {
+    id: user.id,
+    name: user.name ?? "Unknown",
+    email: user.email ?? "",
+    role: user.role,
+    departmentId: user.departmentId,
+  };
+}
+
 export function requireUser(user: SessionUser | null | undefined): SessionUser {
   if (!user) throw new UnauthorizedError();
   return user;

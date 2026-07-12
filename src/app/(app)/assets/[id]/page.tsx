@@ -11,8 +11,10 @@ import { NotFoundError } from "@/lib/errors";
 import { hasPermission } from "@/lib/authz";
 import { canTransition, assetMachine } from "@/lib/stateMachine";
 import { assetQrUrl, generateQrDataUrl } from "@/lib/qr";
+import { listDepartments, listEmployees } from "@/modules/org/service";
 import { AssetStatusBadge } from "@/components/assets/asset-status-badge";
 import { AssetDetailActions } from "@/components/assets/asset-detail-actions";
+import { AllocationActions } from "@/components/assets/allocation-actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -43,11 +45,13 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
     throw err;
   }
 
-  const [allocations, maintenance, locationRows, qrDataUrl] = await Promise.all([
+  const [allocations, maintenance, locationRows, qrDataUrl, employees, departments] = await Promise.all([
     getAssetAllocationHistory(id),
     getAssetMaintenanceHistory(id),
     listLocations(),
     generateQrDataUrl(assetQrUrl(asset.assetTag)),
+    listEmployees(),
+    listDepartments(),
   ]);
 
   const fieldDefs = (asset.category.fieldDefs as unknown as FieldDef[]) ?? [];
@@ -55,6 +59,9 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
   const canEdit = hasPermission(user, "asset.update");
   const canRetire = canEdit && canTransition(assetMachine, asset.status, "RETIRED");
   const canDispose = canEdit && canTransition(assetMachine, asset.status, "DISPOSED");
+
+  const activeAllocation = allocations.find((a) => a.status === "ACTIVE");
+  const holderLabel = (a: (typeof allocations)[number]) => a.holderUser?.name ?? a.holderDept?.name ?? "another holder";
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -70,26 +77,48 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
             {asset.category.name} · registered by {asset.createdBy.name}
           </p>
         </div>
-        {canEdit && (
-          <AssetDetailActions
-            asset={{
-              id: asset.id,
-              name: asset.name,
-              serialNumber: asset.serialNumber,
-              acquisitionDate: asset.acquisitionDate?.toISOString().slice(0, 10) ?? null,
-              acquisitionCost: asset.acquisitionCost ? Number(asset.acquisitionCost) : null,
-              condition: asset.condition,
-              location: asset.location,
-              isBookable: asset.isBookable,
-              photoUrl: asset.photoUrl,
-              attributes,
-            }}
-            fieldDefs={fieldDefs}
-            locations={locationRows.map((l) => l.location).filter(Boolean)}
-            canRetire={canRetire}
-            canDispose={canDispose}
+        <div className="flex flex-col items-end gap-2">
+          <AllocationActions
+            assetId={asset.id}
+            assetStatus={asset.status}
+            activeAllocation={
+              activeAllocation
+                ? {
+                    id: activeAllocation.id,
+                    holderUserId: activeAllocation.holderUserId,
+                    holderLabel: holderLabel(activeAllocation),
+                  }
+                : null
+            }
+            canAllocate={hasPermission(user, "asset.allocate")}
+            canReturnApprove={hasPermission(user, "return.approve")}
+            canTargetOthers={user.role !== "EMPLOYEE"}
+            currentUserId={user.id}
+            currentUserName={user.name ?? "You"}
+            employees={employees.filter((e) => e.status === "ACTIVE").map((e) => ({ id: e.id, name: e.name }))}
+            departments={departments.filter((d) => d.status === "ACTIVE").map((d) => ({ id: d.id, name: d.name }))}
           />
-        )}
+          {canEdit && (
+            <AssetDetailActions
+              asset={{
+                id: asset.id,
+                name: asset.name,
+                serialNumber: asset.serialNumber,
+                acquisitionDate: asset.acquisitionDate?.toISOString().slice(0, 10) ?? null,
+                acquisitionCost: asset.acquisitionCost ? Number(asset.acquisitionCost) : null,
+                condition: asset.condition,
+                location: asset.location,
+                isBookable: asset.isBookable,
+                photoUrl: asset.photoUrl,
+                attributes,
+              }}
+              fieldDefs={fieldDefs}
+              locations={locationRows.map((l) => l.location).filter(Boolean)}
+              canRetire={canRetire}
+              canDispose={canDispose}
+            />
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">

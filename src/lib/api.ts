@@ -3,7 +3,7 @@ import { ZodType, ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { AppError, HTTP_STATUS } from "./errors";
-import { Permission, requirePermission, requireUser, SessionUser } from "./authz";
+import { normalizeSessionUser, Permission, requirePermission, requireUser, SessionUser } from "./authz";
 
 // Uniform envelope (docs/04 §7):
 //   success → { data }
@@ -33,7 +33,7 @@ export function apiHandler<B = undefined>(
     const requestId = crypto.randomUUID().slice(0, 8);
     try {
       const session = await auth();
-      const sessionUser = (session?.user ?? null) as SessionUser | null;
+      const sessionUser = session?.user ? normalizeSessionUser(session.user) : null;
       const user = options.permission
         ? requirePermission(sessionUser, options.permission)
         : requireUser(sessionUser);

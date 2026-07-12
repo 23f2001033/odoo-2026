@@ -106,6 +106,7 @@ enum NotificationType {
   OVERDUE_RETURN
   AUDIT_DISCREPANCY
   RETURN_CONFIRMED
+  RETURN_REQUESTED
 }
 
 enum AttachmentOwner {
@@ -132,6 +133,7 @@ model User {
   allocatedBy       Allocation[]        @relation("AllocatedBy")
   transferRequests  TransferRequest[]   @relation("RequestedBy")
   transferDecisions TransferRequest[]   @relation("DecidedBy")
+  transferTargets   TransferRequest[]   @relation("TransferTarget")
   bookings          Booking[]
   maintenanceRaised MaintenanceRequest[] @relation("RaisedBy")
   maintenanceDecided MaintenanceRequest[] @relation("MaintDecidedBy")
@@ -267,6 +269,7 @@ model TransferRequest {
   requestedById String
   requestedBy   User           @relation("RequestedBy", fields: [requestedById], references: [id])
   targetUserId  String?
+  targetUser    User?          @relation("TransferTarget", fields: [targetUserId], references: [id])
   targetDeptId  String?
   targetDept    Department?    @relation(fields: [targetDeptId], references: [id])
   reason        String?
@@ -274,6 +277,7 @@ model TransferRequest {
   decidedById   String?
   decidedBy     User?          @relation("DecidedBy", fields: [decidedById], references: [id])
   decidedAt     DateTime?
+  decisionNote  String?
   createdAt     DateTime       @default(now())
 
   @@index([assetId])
