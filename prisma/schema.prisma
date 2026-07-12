@@ -1,0 +1,427 @@
+// AssetFlow data model — see docs/04-architecture.md §3 for the ERD and rationale.
+// Two rules are enforced by raw SQL (prisma can't express them), see the
+// `constraints` migration: one active allocation per asset (partial unique
+// index) and no overlapping confirmed bookings (gist exclusion constraint).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── enums ─────────────────────────
+
+enum Role {
+  ADMIN
+  ASSET_MANAGER
+  DEPT_HEAD
+  EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum DeptStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ALLOCATED
+  RESERVED
+  UNDER_MAINTENANCE
+  LOST
+  RETIRED
+  DISPOSED
+}
+
+enum AssetCondition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+}
+
+enum AllocationStatus {
+  ACTIVE
+  RETURNED
+}
+
+enum TransferStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum MaintenanceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AuditCycleStatus {
+  OPEN
+  CLOSED
+}
+
+enum AuditResult {
+  PENDING
+  VERIFIED
+  MISSING
+  DAMAGED
+}
+
+enum NotificationType {
+  ASSET_ASSIGNED
+  MAINTENANCE_APPROVED
+  MAINTENANCE_REJECTED
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_REMINDER
+  TRANSFER_REQUESTED
+  TRANSFER_APPROVED
+  TRANSFER_REJECTED
+  OVERDUE_RETURN
+  AUDIT_DISCREPANCY
+  RETURN_CONFIRMED
+}
+
+enum AttachmentOwner {
+  ASSET
+  MAINTENANCE
+}
+
+// ───────────────────────── auth & org ─────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(EMPLOYEE)
+  status       UserStatus @default(ACTIVE)
+  departmentId String?
+  department   Department? @relation("DeptMembers", fields: [departmentId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  headOfDepartments Department[]        @relation("DeptHead")
+  allocations       Allocation[]        @relation("Holder")
+  allocatedBy       Allocation[]        @relation("AllocatedBy")
+  transferRequests  TransferRequest[]   @relation("RequestedBy")
+  transferDecisions TransferRequest[]   @relation("DecidedBy")
+  bookings          Booking[]
+  maintenanceRaised MaintenanceRequest[] @relation("RaisedBy")
+  maintenanceDecided MaintenanceRequest[] @relation("MaintDecidedBy")
+  auditAssignments  AuditAssignment[]
+  auditChecks       AuditItem[]
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
+  registeredAssets  Asset[]
+  resetTokens       PasswordResetToken[]
+  attachments       Attachment[]
+  createdAuditCycles AuditCycle[]
+
+  @@index([departmentId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Department {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  status    DeptStatus @default(ACTIVE)
+  headId    String?
+  head      User?      @relation("DeptHead", fields: [headId], references: [id])
+  parentId  String?
+  parent    Department?  @relation("DeptHierarchy", fields: [parentId], references: [id])
+  children  Department[] @relation("DeptHierarchy")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  members     User[]       @relation("DeptMembers")
+  allocations Allocation[] @relation("DeptAllocations")
+  transfers   TransferRequest[]
+  bookings    Booking[]
+  auditCycles AuditCycle[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  // field definitions rendered as extra inputs on asset registration,
+  // e.g. [{"key":"warrantyMonths","label":"Warranty (months)","type":"number"}]
+  fieldDefs   Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assets Asset[]
+}
+
+// ───────────────────────── assets ─────────────────────────
+
+// single-row counter incremented inside the registration transaction —
+// gapless, race-safe AF-0001 style tags
+model AssetTagCounter {
+  id    Int @id @default(1)
+  value Int @default(0)
+}
+
+model Asset {
+  id              String         @id @default(cuid())
+  assetTag        String         @unique // AF-0001
+  name            String
+  categoryId      String
+  category        Category       @relation(fields: [categoryId], references: [id])
+  serialNumber    String?
+  acquisitionDate DateTime?
+  acquisitionCost Decimal?       @db.Decimal(12, 2) // display/ranking only, never accounting
+  condition       AssetCondition @default(GOOD)
+  location        String?
+  status          AssetStatus    @default(AVAILABLE)
+  isBookable      Boolean        @default(false)
+  attributes      Json           @default("{}") // values for category.fieldDefs
+  photoUrl        String?
+  createdById     String
+  createdBy       User           @relation(fields: [createdById], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  allocations  Allocation[]
+  transfers    TransferRequest[]
+  bookings     Booking[]
+  maintenance  MaintenanceRequest[]
+  auditItems   AuditItem[]
+  // attachments are looked up polymorphically via (ownerType=ASSET, ownerId)
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([isBookable])
+}
+
+// ───────────────────────── allocation & transfer ─────────────────────────
+
+model Allocation {
+  id               String           @id @default(cuid())
+  assetId          String
+  asset            Asset            @relation(fields: [assetId], references: [id])
+  // exactly one of holderUserId / holderDeptId is set (checked in service)
+  holderUserId     String?
+  holderUser       User?            @relation("Holder", fields: [holderUserId], references: [id])
+  holderDeptId     String?
+  holderDept       Department?      @relation("DeptAllocations", fields: [holderDeptId], references: [id])
+  allocatedById    String
+  allocatedBy      User             @relation("AllocatedBy", fields: [allocatedById], references: [id])
+  allocatedAt      DateTime         @default(now())
+  expectedReturnAt DateTime?
+  returnedAt       DateTime?
+  returnCondition  AssetCondition?
+  returnNotes      String?
+  status           AllocationStatus @default(ACTIVE)
+
+  transfers TransferRequest[]
+
+  // + partial unique index (assetId WHERE status='ACTIVE') in raw migration
+  @@index([assetId])
+  @@index([holderUserId])
+  @@index([status, expectedReturnAt]) // overdue scans
+}
+
+model TransferRequest {
+  id            String         @id @default(cuid())
+  allocationId  String
+  allocation    Allocation     @relation(fields: [allocationId], references: [id])
+  assetId       String
+  asset         Asset          @relation(fields: [assetId], references: [id])
+  requestedById String
+  requestedBy   User           @relation("RequestedBy", fields: [requestedById], references: [id])
+  targetUserId  String?
+  targetDeptId  String?
+  targetDept    Department?    @relation(fields: [targetDeptId], references: [id])
+  reason        String?
+  status        TransferStatus @default(REQUESTED)
+  decidedById   String?
+  decidedBy     User?          @relation("DecidedBy", fields: [decidedById], references: [id])
+  decidedAt     DateTime?
+  createdAt     DateTime       @default(now())
+
+  @@index([assetId])
+  @@index([status])
+}
+
+// ───────────────────────── booking ─────────────────────────
+
+model Booking {
+  id             String        @id @default(cuid())
+  assetId        String
+  asset          Asset         @relation(fields: [assetId], references: [id])
+  bookedById     String
+  bookedBy       User          @relation(fields: [bookedById], references: [id])
+  forDeptId      String?
+  forDept        Department?   @relation(fields: [forDeptId], references: [id])
+  startsAt       DateTime
+  endsAt         DateTime
+  purpose        String?
+  status         BookingStatus @default(CONFIRMED)
+  reminderSentAt DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // + gist exclusion constraint (no overlapping CONFIRMED ranges per asset)
+  // in raw migration. Upcoming/Ongoing/Completed are derived from now().
+  @@index([assetId, startsAt])
+  @@index([bookedById])
+}
+
+// ───────────────────────── maintenance ─────────────────────────
+
+model MaintenanceRequest {
+  id              String              @id @default(cuid())
+  assetId         String
+  asset           Asset               @relation(fields: [assetId], references: [id])
+  raisedById      String
+  raisedBy        User                @relation("RaisedBy", fields: [raisedById], references: [id])
+  title           String
+  description     String
+  priority        MaintenancePriority @default(MEDIUM)
+  photoUrl        String?
+  status          MaintenanceStatus   @default(PENDING)
+  decidedById     String?
+  decidedBy       User?               @relation("MaintDecidedBy", fields: [decidedById], references: [id])
+  decidedAt       DateTime?
+  rejectionReason String?
+  technicianName  String?
+  assignedAt      DateTime?
+  startedAt       DateTime?
+  resolvedAt      DateTime?
+  resolutionNotes String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([assetId])
+  @@index([status])
+}
+
+// ───────────────────────── audit ─────────────────────────
+
+model AuditCycle {
+  id            String           @id @default(cuid())
+  name          String
+  scopeDeptId   String?
+  scopeDept     Department?      @relation(fields: [scopeDeptId], references: [id])
+  scopeLocation String?
+  startsAt      DateTime
+  endsAt        DateTime
+  status        AuditCycleStatus @default(OPEN)
+  createdById   String
+  createdBy     User             @relation(fields: [createdById], references: [id])
+  closedAt      DateTime?
+  createdAt     DateTime         @default(now())
+
+  assignments AuditAssignment[]
+  items       AuditItem[]
+}
+
+model AuditAssignment {
+  id            String     @id @default(cuid())
+  cycleId       String
+  cycle         AuditCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  auditorUserId String
+  auditor       User       @relation(fields: [auditorUserId], references: [id])
+
+  @@unique([cycleId, auditorUserId])
+}
+
+model AuditItem {
+  id          String      @id @default(cuid())
+  cycleId     String
+  cycle       AuditCycle  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  assetId     String
+  asset       Asset       @relation(fields: [assetId], references: [id])
+  result      AuditResult @default(PENDING)
+  notes       String?
+  checkedById String?
+  checkedBy   User?       @relation(fields: [checkedById], references: [id])
+  checkedAt   DateTime?
+
+  @@unique([cycleId, assetId])
+  @@index([cycleId, result]) // discrepancy report query
+}
+
+// ───────────────────────── cross-cutting ─────────────────────────
+
+model Notification {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       NotificationType
+  title      String
+  body       String
+  entityType String?
+  entityId   String?
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
+
+// append-only by convention AND by code: the activity module exposes no
+// update/delete. Every service mutation writes here in-transaction.
+model ActivityLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String // e.g. "asset.allocated"
+  entityType String
+  entityId   String
+  meta       Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Attachment {
+  id           String          @id @default(cuid())
+  ownerType    AttachmentOwner
+  ownerId      String
+  url          String
+  filename     String
+  uploadedById String
+  uploadedBy   User            @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime        @default(now())
+
+  @@index([ownerType, ownerId])
+}
