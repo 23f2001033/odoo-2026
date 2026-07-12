@@ -22,7 +22,7 @@ export const PERMISSIONS = {
 
   // Asset Manager
   "asset.register": ["ASSET_MANAGER", "ADMIN"],
-  "asset.update": ["ASSET_MANAGER", "ADMIN"],
+  "asset.update": ["ASSET_MANAGER", "ADMIN"], // also covers retire/dispose
   "asset.allocate": ["ASSET_MANAGER"],
   "return.approve": ["ASSET_MANAGER"],
   "maintenance.approve": ["ASSET_MANAGER"],

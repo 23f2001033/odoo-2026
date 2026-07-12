@@ -19,9 +19,10 @@ dist/
 *.sqlite
 *.db
 
-# uploads (local file storage in dev)
-uploads/
-public/uploads/
+# uploads (local file storage in dev) — anchored to repo root so this
+# doesn't also match src/app/api/v1/uploads/ (a real route, not output)
+/uploads/
+/public/uploads/
 
 # logs & misc
 *.log
