@@ -30,7 +30,7 @@ const NAV: NavItem[] = [
   { href: "/bookings", label: "Bookings", icon: CalendarClock },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
   { href: "/audits", label: "Audits", icon: ClipboardCheck },
-  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["ADMIN", "ASSET_MANAGER", "DEPT_HEAD"] },
+  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["ADMIN"] }, // matches report.orgWide (spec: only Admin "views org-wide analytics")
   { href: "/activity", label: "Activity", icon: Bell },
   { href: "/organization", label: "Organization", icon: Building2, roles: ["ADMIN"] },
 ];

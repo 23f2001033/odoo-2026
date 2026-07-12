@@ -52,6 +52,16 @@ export function apiHandler<B = undefined>(
   };
 }
 
+// For the rare route that can't use apiHandler (report CSV export needs a
+// non-JSON response type) — same auth/permission resolution apiHandler does
+// internally, exposed so those routes don't each re-derive it (and risk an
+// unsound session-user cast in the process).
+export async function authorize(permission?: Permission): Promise<SessionUser> {
+  const session = await auth();
+  const sessionUser = session?.user ? normalizeSessionUser(session.user) : null;
+  return permission ? requirePermission(sessionUser, permission) : requireUser(sessionUser);
+}
+
 export function errorResponse(err: unknown, requestId: string): NextResponse {
   if (err instanceof ZodError) {
     return NextResponse.json(
