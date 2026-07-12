@@ -16,6 +16,7 @@ export const PERMISSIONS = {
   // Admin: org master data, roles, audit cycles, org-wide analytics
   "org.manage": ["ADMIN"],
   "role.assign": ["ADMIN"],
+  "user.list": ["ADMIN", "ASSET_MANAGER", "DEPT_HEAD"], // directory reads for approval/allocation forms
   "audit.cycle.manage": ["ADMIN"],
   "report.orgWide": ["ADMIN"],
 
