@@ -25,6 +25,61 @@ const MAINTENANCE_INCLUDE = {
 // maintenance request per asset").
 const NON_TERMINAL: MaintenanceStatus[] = ["PENDING", "APPROVED", "ASSIGNED", "IN_PROGRESS"];
 
+async function notifyAssetManagers(
+  tx: Prisma.TransactionClient,
+  payload: { title: string; body: string; entityId: string }
+) {
+  const managers = await tx.user.findMany({ where: { role: "ASSET_MANAGER", status: "ACTIVE" }, select: { id: true } });
+  for (const m of managers) {
+    await createNotification(tx, {
+      userId: m.id,
+      type: "MAINTENANCE_REQUESTED",
+      title: payload.title,
+      body: payload.body,
+      entityType: "Asset",
+      entityId: payload.entityId,
+    });
+  }
+}
+
+// Called from within audit-close's own transaction (modules/audit/service.ts)
+// when a DAMAGED item is confirmed — reuses the same "no duplicate open
+// ticket" invariant as a normal raise, but skips silently instead of
+// throwing, since this is an automated system action, not a user submission.
+export async function autoRaiseMaintenanceFromAudit(
+  tx: Prisma.TransactionClient,
+  params: { assetId: string; raisedById: string; title: string; description: string }
+): Promise<void> {
+  const existing = await tx.maintenanceRequest.findFirst({
+    where: { assetId: params.assetId, status: { in: NON_TERMINAL } },
+  });
+  if (existing) return;
+
+  await tx.maintenanceRequest.create({
+    data: {
+      assetId: params.assetId,
+      raisedById: params.raisedById,
+      title: params.title,
+      description: params.description,
+      priority: "HIGH",
+    },
+  });
+  await tx.activityLog.create({
+    data: {
+      actorId: params.raisedById,
+      action: "maintenance.raised",
+      entityType: "Asset",
+      entityId: params.assetId,
+      meta: { source: "audit", title: params.title },
+    },
+  });
+  await notifyAssetManagers(tx, {
+    title: "Maintenance request awaiting review",
+    body: params.description,
+    entityId: params.assetId,
+  });
+}
+
 export async function raiseMaintenance(actor: SessionUser, input: MaintenanceCreateInput) {
   const asset = await db.asset.findUnique({ where: { id: input.assetId } });
   if (!asset) throw new NotFoundError("Asset", input.assetId);
@@ -60,20 +115,11 @@ export async function raiseMaintenance(actor: SessionUser, input: MaintenanceCre
     });
     // Broadcast to every active Asset Manager — unlike allocations/transfers
     // there's no single prior actor to defer to for a brand-new ticket.
-    const managers = await tx.user.findMany({
-      where: { role: "ASSET_MANAGER", status: "ACTIVE" },
-      select: { id: true },
+    await notifyAssetManagers(tx, {
+      title: "Maintenance request awaiting review",
+      body: `${actor.name} reported an issue with ${asset.name} (${asset.assetTag}): ${input.title}`,
+      entityId: input.assetId,
     });
-    for (const m of managers) {
-      await createNotification(tx, {
-        userId: m.id,
-        type: "MAINTENANCE_REQUESTED",
-        title: "Maintenance request awaiting review",
-        body: `${actor.name} reported an issue with ${asset.name} (${asset.assetTag}): ${input.title}`,
-        entityType: "Asset",
-        entityId: input.assetId,
-      });
-    }
     return request;
   });
 }

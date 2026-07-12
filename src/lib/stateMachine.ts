@@ -41,7 +41,7 @@ export const assetMachine: Machine<AssetStatus> = {
     AVAILABLE: ["ALLOCATED", "RESERVED", "UNDER_MAINTENANCE", "LOST", "RETIRED"],
     ALLOCATED: ["AVAILABLE", "UNDER_MAINTENANCE", "LOST"],
     RESERVED: ["AVAILABLE", "ALLOCATED"],
-    UNDER_MAINTENANCE: ["AVAILABLE", "ALLOCATED", "RETIRED"],
+    UNDER_MAINTENANCE: ["AVAILABLE", "ALLOCATED", "RETIRED", "LOST"], // e.g. sent to a repair vendor who can't locate it
     LOST: ["AVAILABLE"], // found again
     RETIRED: ["DISPOSED"],
     DISPOSED: [], // terminal
