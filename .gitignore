@@ -36,3 +36,6 @@ Thumbs.db
 # prisma generated client is derived, not source
 src/generated/
 *.tsbuildinfo
+
+.vercel
+.env*.local

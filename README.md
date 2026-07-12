@@ -2,6 +2,9 @@
 
 Hackathon project: a centralized platform for organizations to track, allocate, and maintain physical assets and shared resources — asset lifecycle, allocation/transfer with conflict handling, time-slot resource booking, maintenance approval workflows, structured audit cycles, notifications, and analytics.
 
+**Live app:** [assetflow-flame.vercel.app](https://assetflow-flame.vercel.app) — demo login `asha@assetflow.dev` / `Password123` (Admin; see `prisma/seed.ts` header for all personas).
+**Demo video:** [youtu.be/C93HZ62gSPA](https://youtu.be/C93HZ62gSPA)
+
 ## Documentation
 
 | Doc | Contents |
@@ -11,6 +14,7 @@ Hackathon project: a centralized platform for organizations to track, allocate, 
 | [docs/03-product-plan.md](docs/03-product-plan.md) | Prioritized build plan (P0/P1/P2), personas, demo script, risks, open architecture decisions |
 | [docs/04-architecture.md](docs/04-architecture.md) | Full system design — stack, layered module architecture, ERD, state machines, DB-level conflict constraints, RBAC, API surface, jobs, testing, build order |
 | [docs/05-demo-video-script.md](docs/05-demo-video-script.md) | Timed, ≤5-minute script for the portal's required demo video submission (functional flow only) |
+| [docs/06-demo-video-tts-production-guide.md](docs/06-demo-video-tts-production-guide.md) | Alternate production path: ElevenLabs narration script (12 clips) + step-by-step screen recording and editing guide |
 
 ## Quickstart (every teammate)
 

@@ -110,7 +110,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {cards.map((c) => (
           <Card key={c.label}>
-            <CardHeader className="pb-1">
+            <CardHeader className="min-h-10 pb-1">
               <CardTitle className="text-xs font-medium text-muted-foreground">
                 {c.label}
               </CardTitle>

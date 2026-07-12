@@ -311,6 +311,25 @@ async function main() {
     }
   }
 
+  // A booking anchored to the literal moment the seed runs (not a fixed
+  // hour like the ones above) so the dashboard's "Active Bookings" KPI —
+  // which counts startsAt <= now < endsAt live, not a stored total — reads
+  // non-zero right after reseeding. Re-seed shortly before recording a demo.
+  // Refreshed in place (not re-created) each run so re-seeding stays idempotent.
+  const liveWindow = { startsAt: new Date(Date.now() - 15 * 60 * 1000), endsAt: new Date(Date.now() + 45 * 60 * 1000) };
+  const liveBooking = await db.booking.findFirst({
+    where: { assetId: roomA1, purpose: "Live demo booking" },
+  });
+  if (liveBooking) {
+    await db.booking.update({ where: { id: liveBooking.id }, data: liveWindow }).catch(() => null);
+  } else {
+    await db.booking
+      .create({
+        data: { assetId: roomA1, bookedById: u["meera@assetflow.dev"].id, purpose: "Live demo booking", ...liveWindow },
+      })
+      .catch(() => null); // skip silently if it collides with an existing slot
+  }
+
   // ── maintenance history (feeds the frequency report) ─────────────────────
   const scannerId = assetIds["AF-0702"];
   const existingMaint = await db.maintenanceRequest.findFirst({
